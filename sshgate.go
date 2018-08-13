@@ -5,17 +5,23 @@ import (
 	"io"
 	"net"
 	"os"
+	"strings"
 
 	"golang.org/x/crypto/ssh"
 )
 
 func main() {
-	host := os.Args[2:2]
+	argsString := os.Args[2]
 	port := "22"
+	argsSlice := strings.Split(argsString, ";")
+	host := argsSlice[0]
+	commands := argsSlice[1:]
+
+	fmt.Printf("Args: %v", host)
 
 	sshConfig := &ssh.ClientConfig{
-		User:            "simple",
-		Auth:            []ssh.AuthMethod{ssh.Password("simple")},
+		User:            "lumpy",
+		Auth:            []ssh.AuthMethod{ssh.Password("lumpy")},
 		HostKeyCallback: func(host string, remote net.Addr, key ssh.PublicKey) error { return nil },
 	}
 
@@ -75,11 +81,18 @@ func main() {
 
 	go io.Copy(os.Stderr, stderr)
 
-	if err := session.Shell(); err != nil {
-		fmt.Printf("Error: %v", err)
-		os.Exit(1)
-	}
+	if len(commands) > 0 {
+		if err := session.Run(strings.Join(commands, ";")); err != nil {
+			fmt.Printf("Error: %v", err)
+			os.Exit(1)
+		}
+	} else {
+		if err := session.Shell(); err != nil {
+			fmt.Printf("Error: %v", err)
+			os.Exit(1)
+		}
 
-	session.Wait()
+		session.Wait()
+	}
 
 }
